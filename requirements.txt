@@ -1,0 +1,4 @@
+icalendar
+recurring-ical-events
+pyyaml
+requests

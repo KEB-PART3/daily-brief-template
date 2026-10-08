@@ -1,0 +1,44 @@
+name: Daily Brief
+
+# GitHub Actions cron runs on UTC. Convert your local morning time:
+#   6:30 AM PDT (UTC-7) = 13:30 UTC
+#   6:30 AM PST (UTC-8) = 14:30 UTC
+#   6:30 AM EDT (UTC-4) = 10:30 UTC
+#   6:30 AM EST (UTC-5) = 11:30 UTC
+# Pick the one that matches YOUR timezone's daylight/standard offset, and
+# remember to switch the cron line when daylight saving time changes
+# (see README troubleshooting). Format: minute hour * * *.
+on:
+  schedule:
+    - cron: '30 13 * * *'   # 6:30 AM Pacific Daylight Time
+  workflow_dispatch:        # lets you run it manually from the Actions tab
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send the brief
+        # config.yaml is intentionally NOT in the repo (it's gitignored).
+        # Instead, config.example.yaml is copied in and every ${...} value
+        # is filled from repository secrets defined below.
+        run: |
+          cp config.example.yaml config.yaml
+          python brief.py --send
+        env:
+          ICAL_FAMILY: ${{ secrets.ICAL_FAMILY }}
+          ICAL_KID1: ${{ secrets.ICAL_KID1 }}
+          ICAL_KID2: ${{ secrets.ICAL_KID2 }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}

@@ -1,0 +1,84 @@
+# ---------------------------------------------------------------------------
+# daily-brief configuration
+# Copy this file to config.yaml and fill in your own values.
+# config.yaml is gitignored -- it holds your private calendar URLs, so it
+# must NEVER be committed. Values wrapped in ${...} are read from
+# environment variables, which is how GitHub Actions injects your secrets.
+# ---------------------------------------------------------------------------
+
+# Your timezone, in IANA format (e.g. America/New_York, America/Chicago,
+# America/Denver, America/Los_Angeles). This controls which "today" the
+# brief covers and how event times are displayed.
+timezone: America/New_York
+
+# Where you live, as a free-text place name. Used to look up the weather
+# (via Open-Meteo's free geocoding -- no API key needed) and as the label
+# on the weather line.
+location: "Maplewood, NJ"
+
+# Optional: a shorter label for the weather line. Defaults to `location`.
+# location_label: "Maplewood"
+
+# One entry per calendar you want in the brief.
+#   name:      display name, used only in warnings
+#   kid:       whose events these are -- shown as the "Who" in the brief.
+#              Use "Family" for the shared family calendar.
+#   sport:     optional, e.g. soccer, water polo. Used as a fallback emoji
+#              when the event title itself doesn't name a sport
+#              ("Practice" on Emma's calendar still gets a ⚽).
+#   ical_url:  the calendar's PRIVATE iCal feed URL. Keep this secret!
+#              Google:  Calendar Settings -> "Secret address in iCal format"
+#              Apple:   Calendar -> share calendar -> Public Calendar link
+#              Outlook: Calendar -> Share -> Publish (get the ICS link)
+#   primary:   set true on ONE calendar (usually the family one). When the
+#              same event appears on two calendars, the primary calendar's
+#              title is the one shown in the brief.
+calendars:
+  - name: "Family events"
+    kid: Family
+    ical_url: ${ICAL_FAMILY}
+    primary: true
+
+  - name: "Emma soccer"
+    kid: Emma
+    sport: soccer
+    ical_url: ${ICAL_KID1}
+
+  - name: "Jake water polo"
+    kid: Jake
+    sport: water polo
+    ical_url: ${ICAL_KID2}
+
+# Optional: shorten long venue names in the title line.
+# "match" is a case-insensitive substring of the event's location;
+# "short" is what the brief shows. The full address is still used for the
+# tappable Google Maps link underneath.
+venue_shortcuts:
+  - match: "Maplewood Middle School"
+    short: "MMS"
+  - match: "Memorial Park Field"
+    short: "Memorial Park"
+
+# Tomorrow's section only lists events whose title or description contains
+# one of these keywords (appointments, travel, tournaments -- not routine
+# practices). Edit to taste.
+tomorrow_keywords:
+  - tournament
+  - flight
+  - appointment
+  - surgery
+  - holiday
+  - travel
+
+# Email delivery for --send. Every value comes from an environment variable
+# so nothing secret lives in this file. In GitHub Actions these are repo
+# secrets (see README); locally you can export them in your shell.
+# Gmail tip: use an App Password (Google Account -> Security -> 2-Step
+# Verification -> App passwords), not your regular password.
+smtp:
+  host: ${SMTP_HOST}        # e.g. smtp.gmail.com
+  port: 587
+  username: ${SMTP_USER}     # e.g. you@gmail.com
+  password: ${SMTP_PASS}     # app password / secret
+  from: ${SMTP_FROM}        # e.g. Daily Brief <you@gmail.com>
+  to: ${EMAIL_TO}           # who receives the brief
