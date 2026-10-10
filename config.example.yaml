@@ -13,7 +13,8 @@ timezone: America/New_York
 
 # Where you live, as a free-text place name. Used to look up the weather
 # (via Open-Meteo's free geocoding -- no API key needed) and as the label
-# on the weather line.
+# on the weather line. Severe weather alerts come from the National Weather
+# Service (US locations only; skipped silently elsewhere).
 location: "Maplewood, NJ"
 
 # Optional: a shorter label for the weather line. Defaults to `location`.

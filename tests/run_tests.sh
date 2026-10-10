@@ -72,6 +72,26 @@ check "dentist appointment in Tomorrow section" "Dentist appointment"
 # 7. Offline weather fallback.
 check "weather unavailable fallback" "Weather unavailable"
 
+# 8. Weather alert formatting (unit test with synthetic NWS payload).
+ALERT_OUT="$(python3 - "$ROOT" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+from zoneinfo import ZoneInfo
+from brief import format_alerts
+raw = [
+    {"event": "Heat Advisory", "expires": "2026-10-08T22:00:00-07:00"},
+    {"event": "Heat Advisory", "expires": "2026-10-08T22:00:00-07:00"},
+    {"event": "Wind Advisory", "expires": "2026-10-09T18:00:00-07:00"},
+]
+for line in format_alerts(raw, ZoneInfo("America/Los_Angeles")):
+    print(line)
+PY
+)"
+[ "$ALERT_OUT" = "🌡️ Heat Advisory until Thursday 10:00 PM
+💨 Wind Advisory until Friday 6:00 PM" ] \
+  && { pass=$((pass+1)); echo "PASS: alerts formatted + deduped"; } \
+  || { fail=$((fail+1)); echo "FAIL: alerts (got: $ALERT_OUT)"; }
+
 echo "---------------------------------------------------"
 echo "$pass passed, $fail failed"
 [ "$fail" = "0" ]

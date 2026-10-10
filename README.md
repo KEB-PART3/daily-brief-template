@@ -3,7 +3,8 @@
 A plain-text morning brief for your family, built from your calendars' private
 iCal feeds. Every morning it emails you today's schedule — events pulled from
 each family member's calendar, deduplicated, sorted, with a weather line,
-tappable map links, conflict flags, and a heads-up section for tomorrow's
+severe weather alerts (US), tappable map links, conflict flags, and a
+heads-up section for tomorrow's
 big items (tournaments, travel, appointments). No server, no OAuth, no API
 keys: it runs on GitHub Actions' free scheduler.
 

@@ -319,8 +319,69 @@ def matches_keywords(ev, keywords):
 # Weather (Open-Meteo, no API key)
 # ---------------------------------------------------------------------------
 
+# NWS alert event keywords -> emoji. US only; the lookup below is skipped
+# silently anywhere else.
+ALERT_EMOJIS = [
+    ("heat", "\U0001F321\uFE0F"),
+    ("freeze", "\U0001F976"),
+    ("frost", "\U0001F976"),
+    ("wind", "\U0001F4A8"),
+    ("tornado", "\u26C8\uFE0F"),
+    ("hurricane", "\U0001F300"),
+    ("storm", "\u26C8\uFE0F"),
+    ("flood", "\U0001F30A"),
+    ("fire", "\U0001F525"),
+    ("snow", "\u2744\uFE0F"),
+    ("winter", "\u2744\uFE0F"),
+    ("ice", "\u2744\uFE0F"),
+]
+
+
+def fetch_alerts(lat, lon):
+    """Raw active NWS alerts for a US lat/lon; [] on any failure."""
+    try:
+        data = requests.get(
+            "https://api.weather.gov/alerts/active",
+            params={"point": f"{lat},{lon}"},
+            headers={"User-Agent": "daily-brief-template"},
+            timeout=20).json()
+    except Exception:
+        return []
+    alerts = []
+    for feat in data.get("features", []):
+        props = feat.get("properties", {})
+        if props.get("event") and props.get("expires"):
+            alerts.append({"event": props["event"],
+                           "expires": props["expires"]})
+    return alerts
+
+
+def format_alerts(raw_alerts, tz):
+    """Turn raw NWS alerts into one-line brief flags (deduplicated)."""
+    lines, seen = [], set()
+    for a in raw_alerts:
+        if a["event"] in seen:
+            continue
+        seen.add(a["event"])
+        emoji = "\u26A0\uFE0F"
+        name = a["event"].lower()
+        for keyword, em in ALERT_EMOJIS:
+            if keyword in name:
+                emoji = em
+                break
+        try:
+            exp = datetime.fromisoformat(a["expires"]).astimezone(tz)
+            when = f"until {exp.strftime('%A')} {fmt_time(exp)}"
+        except Exception:
+            when = ""
+        lines.append(f"{emoji} {a['event']} {when}".rstrip())
+        if len(lines) == 3:
+            break
+    return lines
+
+
 def get_weather(location, tz_name):
-    """Returns (emoji, high, low, condition) for today, or None on failure."""
+    """Returns (emoji, high, low, condition, alerts) for today, or None."""
     try:
         g = requests.get(
             "https://geocoding-api.open-meteo.com/v1/search",
@@ -337,8 +398,9 @@ def get_weather(location, tz_name):
             timeout=20).json()["daily"]
         code = f["weathercode"][0]
         emoji, condition = WEATHER_CODES.get(code, ("\u26C5", "Variable"))
+        alerts = format_alerts(fetch_alerts(lat, lon), ZoneInfo(tz_name))
         return (emoji, round(f["temperature_2m_max"][0]),
-                round(f["temperature_2m_min"][0]), condition)
+                round(f["temperature_2m_min"][0]), condition, alerts)
     except Exception:
         return None
 
@@ -351,15 +413,18 @@ def compose_brief(cfg, today_events, tomorrow_events, weather, target_date):
     tz = ZoneInfo(cfg["timezone"])
     label = cfg.get("location_label") or cfg["location"]
     if weather:
-        emoji, high, low, condition = weather
+        emoji, high, low, condition, alerts = weather
         weather_line = f"{emoji} {high}\u00B0 / {low}\u00B0, {condition} \u2014 {label}"
     else:
         weather_line = f"\u26C5 Weather unavailable \u2014 {label}"
+        alerts = []
 
     shortcuts = cfg["venue_shortcuts"]
-    parts = [weather_line, "",
-             f"\U0001F4C5 Today's Schedule \u2014 "
-             f"{target_date.strftime('%A, %B %-d')}", ""]
+    parts = [weather_line]
+    parts.extend(alerts)
+    parts += ["",
+              f"\U0001F4C5 Today's Schedule \u2014 "
+              f"{target_date.strftime('%A, %B %-d')}", ""]
     if not today_events:
         parts.append("No events on the calendar today.")
     else:
